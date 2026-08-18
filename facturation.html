@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>JAF Factures — Facturation mobile</title>
+<meta name="description" content="Application mobile JAF Consulting pour créer, calculer et partager vos factures proforma et définitives.">
+<meta name="theme-color" content="#0e3a37">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JAF Factures">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" href="assets/icon-192.png">
+<style>
+  :root{
+    --forest:#0e3a37;
+    --forest-light:#1f5c58;
+    --gold:#b8873a;
+    --gold-soft:#f0e4cc;
+    --danger:#a6432f;
+    --ink:#1b1e22;
+    --ink-soft:#565f5d;
+    --ink-faint:#8a938f;
+    --bg:#f2f1ec;
+    --card:#ffffff;
+    --line:#e4e0d4;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --forest:#173f3b; --forest-light:#2c6b64; --gold:#d6b872; --gold-soft:#2c2415;
+      --ink:#eef0ee; --ink-soft:#b7c0bd; --ink-faint:#7d8885;
+      --bg:#12151a; --card:#1b1f24; --line:#2b3138;
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    padding-bottom:calc(230px + var(--safe-b));
+  }
+  body.history-open{ padding-bottom:calc(64px + var(--safe-b)); }
+  a{color:inherit;}
+  h1,h2,h3{margin:0;}
+
+  /* App bar */
+  .appbar{
+    position:sticky; top:0; z-index:20;
+    background:var(--forest);
+    color:#fff;
+    padding:calc(10px + var(--safe-t)) 16px 10px;
+    display:flex; align-items:center; gap:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.15);
+  }
+  .appbar img{height:26px; display:block; flex-shrink:0;}
+  .appbar .title{font-size:15px; font-weight:700; letter-spacing:0.01em; flex:1 1 auto; min-width:0;}
+  .appbar .title .title-main{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .appbar .title small{display:block; font-size:10.5px; font-weight:500; opacity:0.75; letter-spacing:0.04em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .appbar select{
+    background:rgba(255,255,255,0.12);
+    color:#fff;
+    border:1px solid rgba(255,255,255,0.35);
+    border-radius:20px;
+    padding:6px 6px;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    flex:0 1 108px;
+    min-width:0;
+    max-width:108px;
+  }
+  .appbar select option{color:#111;}
+  .appbar .reset-btn{
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.35);
+    color:#fff;
+    border-radius:50%;
+    width:32px; height:32px;
+    font-size:15px;
+    line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+
+  main{max-width:640px; margin:0 auto; padding:14px 14px 24px;}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:0 1px 2px rgba(20,22,25,0.04);
+  }
+  .card h2{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:var(--forest-light);
+    margin:0 0 12px;
+    border-left:3px solid var(--gold);
+    padding-left:8px;
+  }
+  @media (prefers-color-scheme: dark){ .card h2{ color:#7fd6c8; } }
+
+  .field{margin-bottom:12px;}
+  .field:last-child{margin-bottom:0;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  label{
+    display:block;
+    font-size:11.5px;
+    color:var(--ink-faint);
+    margin-bottom:5px;
+    letter-spacing:0.02em;
+  }
+  input, select, textarea{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    font-size:16px;
+    color:var(--ink);
+    background:var(--bg);
+    font-family:inherit;
+  }
+  textarea{resize:vertical; min-height:60px;}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--forest-light); outline-offset:1px;}
+
+  /* Items */
+  .item-row{
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px;
+    margin-bottom:10px;
+    position:relative;
+    background:var(--bg);
+  }
+  .item-row .item-del{
+    position:absolute; top:8px; right:8px;
+    background:none; border:none; color:var(--danger);
+    font-size:16px; padding:4px; line-height:1;
+  }
+  .item-row .item-desc{margin-bottom:8px; margin-right:26px;}
+  .item-row .item-nums{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; align-items:end;}
+  .item-row .item-nums label{font-size:10px;}
+  .item-row .item-total{
+    font-size:15px; font-weight:700; color:var(--forest-light);
+    padding-top:8px; text-align:right;
+  }
+  @media (prefers-color-scheme: dark){ .item-row .item-total{ color:#7fd6c8; } }
+
+  .add-row{
+    width:100%;
+    font-size:13.5px; font-weight:600;
+    background:none;
+    border:1.5px dashed var(--forest-light);
+    color:var(--forest-light);
+    padding:11px;
+    border-radius:10px;
+    margin-top:2px;
+  }
+  @media (prefers-color-scheme: dark){ .add-row{ color:#7fd6c8; border-color:#7fd6c8; } }
+
+  .totals{margin-top:14px; padding-top:12px; border-top:1px solid var(--line);}
+  .totals .row{display:flex; justify-content:space-between; align-items:center; padding:5px 0; font-size:13.5px;}
+  .totals .row input{width:64px; padding:6px 8px; font-size:14px; text-align:right;}
+  .totals .grand{
+    font-size:19px; font-weight:800; color:var(--forest-light);
+    border-top:1px solid var(--line); margin-top:6px; padding-top:10px;
+  }
+  @media (prefers-color-scheme: dark){ .totals .grand{ color:#7fd6c8; } }
+
+  /* Fixed action bar (form view), sits directly above the tab bar */
+  .action-bar{
+    position:fixed; left:0; right:0; bottom:calc(58px + var(--safe-b));
+    max-width:640px; margin:0 auto;
+    background:var(--bg);
+    padding:10px 14px;
+    border-top:1px solid var(--line);
+    z-index:25;
+  }
+  .btn-main{
+    width:100%;
+    background:var(--forest);
+    color:#fff;
+    border:none;
+    padding:15px;
+    font-size:15px;
+    font-weight:700;
+    border-radius:12px;
+    letter-spacing:0.01em;
+  }
+  .btn-main:active{background:var(--forest-light);}
+  .share-buttons{display:flex; gap:8px; margin-top:8px;}
+  .share-buttons button{
+    flex:1; border:none; color:#fff; padding:13px 8px;
+    font-size:13px; font-weight:700; border-radius:12px;
+  }
+  .btn-whatsapp{background:#25D366;}
+  .btn-email{background:var(--gold);}
+  .share-note{font-size:11px; color:var(--ink-faint); margin-top:8px; line-height:1.5; text-align:center;}
+
+  /* Bottom tab bar */
+  .tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    display:flex;
+    background:var(--card);
+    border-top:1px solid var(--line);
+    padding-bottom:var(--safe-b);
+  }
+  .tabbar button{
+    flex:1; background:none; border:none; padding:9px 4px 8px;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    color:var(--ink-faint); font-size:11px; font-weight:600;
+  }
+  .tabbar button .ic{font-size:19px;}
+  .tabbar button.active{color:var(--forest-light);}
+  @media (prefers-color-scheme: dark){ .tabbar button.active{ color:#7fd6c8; } }
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* History */
+  .hist-empty{
+    text-align:center; color:var(--ink-faint); padding:60px 20px; font-size:13.5px; line-height:1.6;
+  }
+  .hist-empty .ic{font-size:38px; display:block; margin-bottom:10px;}
+  .hist-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:14px; margin-bottom:12px;
+  }
+  .hist-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .hist-client{font-size:15px; font-weight:700;}
+  .hist-sub{font-size:12px; color:var(--ink-faint); margin-top:2px;}
+  .hist-badge{
+    font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;
+    padding:3px 8px; border-radius:20px; white-space:nowrap;
+  }
+  .hist-badge.proforma{background:var(--gold-soft); color:var(--gold);}
+  .hist-badge.definitive{background:var(--forest); color:#fff;}
+  .hist-total{font-size:17px; font-weight:800; color:var(--forest-light); margin-top:8px;}
+  @media (prefers-color-scheme: dark){ .hist-total{ color:#7fd6c8; } }
+  .hist-actions{display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;}
+  .hist-actions button{
+    flex:1; min-width:70px;
+    background:var(--bg); border:1px solid var(--line); color:var(--ink);
+    padding:9px 6px; font-size:12px; font-weight:600; border-radius:9px;
+  }
+  .hist-actions button.danger{color:var(--danger);}
+
+  .search-field{margin-bottom:14px;}
+
+  .toast{
+    position:fixed; left:50%; bottom:calc(76px + var(--safe-b));
+    transform:translateX(-50%);
+    background:var(--ink); color:var(--bg);
+    padding:10px 18px; border-radius:30px; font-size:13px; font-weight:600;
+    box-shadow:0 6px 20px rgba(0,0,0,0.25);
+    z-index:50; opacity:0; pointer-events:none; transition:opacity 0.2s ease;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <img src="assets/jaf-logo.png" alt="JAF Consulting">
+  <div class="title"><span class="title-main">Facturation</span><small id="appbarSub">Nouvelle facture</small></div>
+  <select id="docType" onchange="onDocTypeChange()">
+    <option value="Facture Proforma">Proforma</option>
+    <option value="Facture Définitive">Définitive</option>
+  </select>
+  <button class="reset-btn" id="resetBtn" title="Nouvelle facture" aria-label="Nouvelle facture">＋</button>
+</div>
+
+<main>
+
+  <div class="view active" id="viewForm">
+
+    <div class="card">
+      <h2>Émetteur</h2>
+      <div class="grid2">
+        <div class="field">
+          <label>Nom / Raison sociale</label>
+          <input id="issuerName" value="JAF Consulting">
+        </div>
+        <div class="field">
+          <label>Contact (tél / email)</label>
+          <input id="issuerContact" placeholder="+243 ... — contact@...">
+        </div>
+      </div>
+      <div class="field">
+        <label>Adresse</label>
+        <input id="issuerAddress" placeholder="Kinshasa, RDC">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Client &amp; référence</h2>
+      <div class="field">
+        <label>Nom du client / organisation</label>
+        <input id="clientName" placeholder="Ex: ONG / Institution">
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Téléphone (WhatsApp)</label>
+          <input id="clientPhone" placeholder="+243..." inputmode="tel">
+        </div>
+        <div class="field">
+          <label>Email client</label>
+          <input id="clientEmail" type="email" placeholder="client@exemple.com">
+        </div>
+      </div>
+      <div class="field">
+        <label>Sujet / objet de la prestation</label>
+        <input id="researchTopic" placeholder="Ex: Qualité des données de vaccination — ZS Binza Ozone">
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>N° de facture</label>
+          <input id="invoiceNumber" value="">
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input id="invoiceDate" type="date">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Validité de l'offre</label>
+          <input id="validity" placeholder="Ex: 30 jours">
+        </div>
+        <div class="field">
+          <label>Devise</label>
+          <select id="currency">
+            <option value="USD">USD ($)</option>
+            <option value="CDF">CDF (FC)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Prestations</h2>
+      <div class="field">
+        <label>Ajouter une prestation JAF (optionnel)</label>
+        <select id="serviceQuickAdd" onchange="quickAddService()">
+          <option value="">— Choisir une prestation —</option>
+          <optgroup label="Collecte &amp; terrain">
+            <option value="Conception du formulaire XLSForm (KoboToolbox / ODK)">Conception du formulaire XLSForm</option>
+            <option value="Collecte des données électronique (KoboToolbox / ODK / SurveyCTO)">Collecte des données électronique</option>
+            <option value="Recrutement des enquêteurs">Recrutement des enquêteurs</option>
+            <option value="Formation des enquêteurs">Formation des enquêteurs</option>
+            <option value="Supervision des enquêteurs">Supervision des enquêteurs</option>
+            <option value="Recrutement des consultants">Recrutement des consultants</option>
+            <option value="Évaluation à mi-parcours">Évaluation à mi-parcours</option>
+          </optgroup>
+          <optgroup label="Traitement &amp; analyse">
+            <option value="Nettoyage des données">Nettoyage des données</option>
+            <option value="Traitement des données">Traitement des données</option>
+            <option value="Analyse statistique avancée (régression, modélisation)">Analyse statistique avancée</option>
+            <option value="Contrôle de la qualité des données (cadre OMS DQR)">Contrôle qualité des données (DQR)</option>
+            <option value="Analyse qualitative (NVivo)">Analyse qualitative (NVivo)</option>
+            <option value="Cartographie et analyse spatiale (QGIS)">Cartographie et analyse spatiale (QGIS)</option>
+          </optgroup>
+          <optgroup label="Résultats &amp; restitution">
+            <option value="Présentation et interprétation des résultats">Présentation et interprétation des résultats</option>
+            <option value="Discussion des résultats">Discussion des résultats</option>
+            <option value="Élaboration de tableaux de bord (Power BI)">Élaboration de tableaux de bord (Power BI)</option>
+            <option value="Rédaction de rapport d'étude / policy brief">Rédaction de rapport d'étude / policy brief</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div id="itemsBody"></div>
+      <button class="add-row" type="button" onclick="addRow()">+ Ajouter une ligne</button>
+
+      <div class="totals">
+        <div class="row"><span>Sous-total</span><span id="subtotalDisplay">0.00</span></div>
+        <div class="row">
+          <span>Remise (%)</span>
+          <input id="discountPct" value="0" type="number" min="0" max="100" inputmode="decimal">
+        </div>
+        <div class="row grand"><span>Total à payer</span><span id="grandTotalDisplay">0.00</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Moyen de paiement</h2>
+      <div class="field">
+        <label>Option 1</label>
+        <input id="paymentOption1" placeholder="Ex: M-Pesa: 0000000000">
+      </div>
+      <div class="field">
+        <label>Option 2</label>
+        <input id="paymentOption2" placeholder="Ex: En espèces">
+      </div>
+      <div class="field">
+        <label>Option 3 — Virement bancaire</label>
+        <input id="paymentOption3" placeholder="Ex: Banque XYZ — N° compte: 0000000000">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Conditions / Notes</h2>
+      <textarea id="notes" rows="3" placeholder="Ex: Paiement à 50% à la commande, solde à la livraison...">Paiement: 50% à la commande, solde à la livraison des résultats.</textarea>
+    </div>
+
+  </div>
+
+  <div class="view" id="viewHistory">
+    <div class="field search-field">
+      <input id="historySearch" placeholder="🔍 Rechercher par client ou n° de facture" oninput="renderHistory()">
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+</main>
+
+<div class="action-bar view active" id="actionBarForm">
+  <button class="btn-main" onclick="generatePDF()">📄 Générer le PDF</button>
+  <div class="share-buttons" id="shareButtons" style="display:none;">
+    <button class="btn-whatsapp" onclick="shareViaWhatsApp()">💬 WhatsApp</button>
+    <button class="btn-email" onclick="shareViaEmail()">✉️ Email</button>
+  </div>
+  <p class="share-note" id="shareNote" style="display:none;">Sur téléphone, ces boutons ouvrent le partage natif avec le PDF déjà joint.</p>
+</div>
+
+<div class="tabbar">
+  <button id="tabFormBtn" class="active" onclick="switchTab('form')">
+    <span class="ic">🧾</span><span>Facture</span>
+  </button>
+  <button id="tabHistoryBtn" onclick="switchTab('history')">
+    <span class="ic">🕘</span><span>Historique</span>
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="assets/jspdf.umd.min.js"></script>
+<script>
+const SETTINGS_KEY = 'jafFacturationSettings';
+const HISTORY_KEY = 'jafFacturationHistory';
+
+let rowCount = 0;
+let lastPDFBlob = null;
+let lastPDFFilename = '';
+let lastInvoiceSummary = null;
+let currentEditId = null;
+let LOGO_DATA_URL = null;
+
+// ---------- Tabs ----------
+function switchTab(tab) {
+  document.getElementById('viewForm').classList.toggle('active', tab === 'form');
+  document.getElementById('viewHistory').classList.toggle('active', tab === 'history');
+  document.getElementById('actionBarForm').classList.toggle('active', tab === 'form');
+  document.getElementById('tabFormBtn').classList.toggle('active', tab === 'form');
+  document.getElementById('tabHistoryBtn').classList.toggle('active', tab === 'history');
+  document.body.classList.toggle('history-open', tab === 'history');
+  if (tab === 'history') renderHistory();
+  window.scrollTo(0, 0);
+}
+
+function onDocTypeChange() {
+  const isDef = document.getElementById('docType').value === 'Facture Définitive';
+  document.getElementById('appbarSub').textContent = currentEditId ? 'Modification' : (isDef ? 'Définitive' : 'Proforma');
+}
+
+// ---------- Toast ----------
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ---------- Items ----------
+function quickAddService() {
+  const select = document.getElementById('serviceQuickAdd');
+  const value = select.value;
+  if (!value) return;
+  addRow(value, 1, 0);
+  select.value = '';
+}
+
+function addRow(desc = '', qty = 1, pu = 0) {
+  rowCount++;
+  const wrap = document.getElementById('itemsBody');
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.id = 'row-' + rowCount;
+  row.innerHTML = `
+    <button type="button" class="item-del" onclick="removeRow('row-${rowCount}')">✕</button>
+    <div class="field item-desc">
+      <label>Description</label>
+      <input type="text" value="${escapeAttr(desc)}" oninput="recalc()">
+    </div>
+    <div class="item-nums">
+      <div class="field">
+        <label>Qté</label>
+        <input type="number" min="0" step="1" value="${qty}" oninput="recalc()" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label>Prix unitaire</label>
+        <input type="number" min="0" step="0.01" value="${pu}" oninput="recalc()" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <div class="item-total" data-total>0.00</div>
+      </div>
+    </div>
+  `;
+  wrap.appendChild(row);
+  recalc();
+}
+
+function removeRow(id) {
+  const row = document.getElementById(id);
+  if (row) row.remove();
+  recalc();
+}
+
+function clearRows() {
+  document.getElementById('itemsBody').innerHTML = '';
+  rowCount = 0;
+}
+
+function readItems() {
+  const rows = document.querySelectorAll('#itemsBody .item-row');
+  const items = [];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    items.push({
+      desc: inputs[0].value || '',
+      qty: parseFloat(inputs[1].value) || 0,
+      pu: parseFloat(inputs[2].value) || 0
+    });
+  });
+  return items;
+}
+
+function recalc() {
+  const rows = document.querySelectorAll('#itemsBody .item-row');
+  let subtotal = 0;
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const qty = parseFloat(inputs[1].value) || 0;
+    const pu = parseFloat(inputs[2].value) || 0;
+    const total = qty * pu;
+    row.querySelector('[data-total]').textContent = formatNum(total);
+    subtotal += total;
+  });
+  const discountPct = parseFloat(document.getElementById('discountPct').value) || 0;
+  const discountAmt = subtotal * (discountPct / 100);
+  const grandTotal = subtotal - discountAmt;
+
+  document.getElementById('subtotalDisplay').textContent = formatNum(subtotal);
+  document.getElementById('grandTotalDisplay').textContent = formatNum(grandTotal);
+  return { subtotal, discountPct, discountAmt, grandTotal };
+}
+
+function formatNum(n) {
+  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function generateInvoiceNumber() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const rand = String(Math.floor(Math.random() * 900) + 100);
+  return `JAF-${y}-${m}-${rand}`;
+}
+
+// ---------- Nombre en toutes lettres (français) ----------
+function numberToFrenchWords(num) {
+  const units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf'];
+  const teens = ['dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+  const tens = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+
+  function convertBelow100(n) {
+    if (n < 10) return units[n];
+    if (n < 20) return teens[n - 10];
+    const ten = Math.floor(n / 10);
+    const unit = n % 10;
+    if (ten === 7 || ten === 9) {
+      return tens[ten] + (unit === 1 && ten === 7 ? '-et-' : '-') + teens[unit];
+    }
+    if (unit === 0) return tens[ten] + (ten === 8 ? 's' : '');
+    if (unit === 1 && (ten === 2 || ten === 3 || ten === 4 || ten === 5 || ten === 6)) {
+      return tens[ten] + '-et-un';
+    }
+    return tens[ten] + '-' + units[unit];
+  }
+
+  function convertBelow1000(n) {
+    if (n < 100) return convertBelow100(n);
+    const hundred = Math.floor(n / 100);
+    const rest = n % 100;
+    let str = (hundred === 1 ? 'cent' : units[hundred] + ' cent');
+    if (rest === 0 && hundred > 1) str += 's';
+    if (rest > 0) str += ' ' + convertBelow100(rest);
+    return str;
+  }
+
+  if (num === 0) return 'zéro';
+
+  let result = '';
+  const billions = Math.floor(num / 1000000000);
+  const millions = Math.floor((num % 1000000000) / 1000000);
+  const thousands = Math.floor((num % 1000000) / 1000);
+  const remainder = num % 1000;
+
+  if (billions > 0) {
+    result += (billions === 1 ? 'un milliard' : convertBelow1000(billions) + ' milliards') + ' ';
+  }
+  if (millions > 0) {
+    result += (millions === 1 ? 'un million' : convertBelow1000(millions) + ' millions') + ' ';
+  }
+  if (thousands > 0) {
+    result += (thousands === 1 ? 'mille' : convertBelow1000(thousands) + ' mille') + ' ';
+  }
+  if (remainder > 0) {
+    result += convertBelow1000(remainder);
+  }
+
+  return result.trim();
+}
+
+function amountInWords(amount, currency) {
+  const wholePart = Math.floor(amount);
+  const centsPart = Math.round((amount - wholePart) * 100);
+  const currencyName = currency === 'USD' ? 'dollars américains' : 'francs congolais';
+  const currencyNameSingular = currency === 'USD' ? 'dollar américain' : 'franc congolais';
+
+  let words = numberToFrenchWords(wholePart) + ' ' + (wholePart <= 1 ? currencyNameSingular : currencyName);
+
+  if (centsPart > 0) {
+    words += ' et ' + numberToFrenchWords(centsPart) + ' cent' + (centsPart > 1 ? 's' : '');
+  }
+
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+// ---------- Logo ----------
+async function loadLogo() {
+  if (LOGO_DATA_URL) return LOGO_DATA_URL;
+  try {
+    const res = await fetch('assets/jaf-logo.png');
+    const blob = await res.blob();
+    LOGO_DATA_URL = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.warn('Logo introuvable', e);
+  }
+  return LOGO_DATA_URL;
+}
+
+// ---------- Construction du PDF (utilisée par le formulaire et l'historique) ----------
+async function buildInvoicePDF(f) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const docType = f.docType;
+
+  doc.saveGraphicsState();
+  doc.setGState(new doc.GState({ opacity: 0.08 }));
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(70);
+  doc.setTextColor(14, 58, 55);
+  const watermarkText = docType === 'Facture Définitive' ? 'DÉFINITIVE' : 'PROFORMA';
+  doc.text(watermarkText, 105, 160, { align: 'center', angle: 45 });
+  doc.restoreGraphicsState();
+
+  const marginX = 18;
+  let y = 20;
+
+  const logo = await loadLogo();
+
+  doc.setFillColor(14, 58, 55);
+  doc.rect(marginX, y - 8, 60, 22, 'F');
+  try {
+    if (!logo) throw new Error('no-logo');
+    doc.addImage(logo, 'PNG', marginX + 3, y - 6, 54, 18);
+  } catch (e) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(247, 244, 236);
+    doc.text(f.issuerName || 'JAF Consulting', marginX + 5, y + 3);
+  }
+  y += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(50, 50, 50);
+  if (f.issuerAddress) { doc.text(f.issuerAddress, marginX, y); y += 4.5; }
+  if (f.issuerContact) { doc.text(f.issuerContact, marginX, y); y += 4.5; }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(31, 92, 88);
+  doc.text(docType.toUpperCase(), 210 - marginX, 20, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(50, 50, 50);
+  doc.text(`N°: ${f.invoiceNumber}`, 210 - marginX, 27, { align: 'right' });
+  doc.text(`Date: ${f.invoiceDate}`, 210 - marginX, 32, { align: 'right' });
+  if (f.validity) doc.text(`Validité: ${f.validity}`, 210 - marginX, 37, { align: 'right' });
+
+  y = Math.max(y, 40) + 6;
+  doc.setDrawColor(201, 192, 168);
+  doc.line(marginX, y, 210 - marginX, y);
+  y += 8;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(31, 92, 88);
+  doc.text('CLIENT', marginX, y);
+  y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(10);
+  doc.text(f.clientName || '—', marginX, y);
+  y += 5;
+  const clientContactLine = [f.clientPhone, f.clientEmail].filter(Boolean).join(' — ');
+  if (clientContactLine) { doc.setFontSize(9); doc.text(clientContactLine, marginX, y); y += 5; }
+  if (f.researchTopic) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.setTextColor(90, 83, 67);
+    const topicLines = doc.splitTextToSize(`Sujet: ${f.researchTopic}`, 210 - 2 * marginX);
+    doc.text(topicLines, marginX, y);
+    y += topicLines.length * 4.5;
+  }
+
+  y += 6;
+
+  const colX = { desc: marginX, qty: 118, pu: 140, total: 210 - marginX };
+  doc.setFillColor(14, 58, 55);
+  doc.rect(marginX, y, 210 - 2 * marginX, 8, 'F');
+  doc.setTextColor(247, 244, 236);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('DESCRIPTION', colX.desc + 2, y + 5.5);
+  doc.text('QTÉ', colX.qty, y + 5.5);
+  doc.text('P.U.', colX.pu, y + 5.5);
+  doc.text('TOTAL', colX.total, y + 5.5, { align: 'right' });
+  y += 8;
+
+  doc.setTextColor(30, 30, 30);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  let subtotal = 0;
+  let rowIndex = 0;
+
+  (f.items || []).forEach(item => {
+    const desc = item.desc || '—';
+    const qty = item.qty || 0;
+    const pu = item.pu || 0;
+    const total = qty * pu;
+    subtotal += total;
+
+    if (rowIndex % 2 === 0) {
+      doc.setFillColor(247, 244, 236);
+      doc.rect(marginX, y, 210 - 2 * marginX, 7, 'F');
+    }
+
+    const descLines = doc.splitTextToSize(desc, 90);
+    doc.text(descLines, colX.desc + 2, y + 5);
+    doc.text(String(qty), colX.qty, y + 5);
+    doc.text(formatNum(pu), colX.pu, y + 5);
+    doc.text(formatNum(total) + ' ' + f.currency, colX.total, y + 5, { align: 'right' });
+
+    y += Math.max(7, descLines.length * 5);
+    rowIndex++;
+
+    if (y > 260) { doc.addPage(); y = 20; }
+  });
+
+  y += 4;
+  doc.setDrawColor(201, 192, 168);
+  doc.line(120, y, 210 - marginX, y);
+  y += 6;
+
+  const discountPct = f.discountPct || 0;
+  const discountAmt = subtotal * (discountPct / 100);
+  const grandTotal = subtotal - discountAmt;
+
+  doc.setFontSize(9.5);
+  doc.text('Sous-total:', 140, y);
+  doc.text(formatNum(subtotal) + ' ' + f.currency, 210 - marginX, y, { align: 'right' });
+  y += 5.5;
+
+  if (discountPct > 0) {
+    doc.text(`Remise (${discountPct}%):`, 140, y);
+    doc.text('-' + formatNum(discountAmt) + ' ' + f.currency, 210 - marginX, y, { align: 'right' });
+    y += 5.5;
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(14, 58, 55);
+  doc.text('TOTAL:', 140, y + 2);
+  doc.text(formatNum(grandTotal) + ' ' + f.currency, 210 - marginX, y + 2, { align: 'right' });
+
+  y += 12;
+
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8.5);
+  doc.setTextColor(60, 60, 60);
+  const wordsText = `Arrêtée la présente ${docType.toLowerCase()} à la somme de : ${amountInWords(grandTotal, f.currency)}.`;
+  const wordsLines = doc.splitTextToSize(wordsText, 210 - 2 * marginX);
+  doc.text(wordsLines, marginX, y);
+  y += wordsLines.length * 4.2;
+
+  y += 3;
+
+  if (f.notes) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 83, 67);
+    const noteLines = doc.splitTextToSize(f.notes, 210 - 2 * marginX);
+    doc.text(noteLines, marginX, y);
+    y += noteLines.length * 4.5;
+  }
+
+  if (f.paymentOption1 || f.paymentOption2 || f.paymentOption3) {
+    y += 4;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(31, 92, 88);
+    doc.text('MOYEN DE PAIEMENT', marginX, y);
+    y += 5.5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 30, 30);
+    if (f.paymentOption1) { doc.text(`• ${f.paymentOption1}`, marginX, y); y += 5; }
+    if (f.paymentOption2) { doc.text(`• ${f.paymentOption2}`, marginX, y); y += 5; }
+    if (f.paymentOption3) {
+      const bankLines = doc.splitTextToSize(`• ${f.paymentOption3}`, 210 - 2 * marginX);
+      doc.text(bankLines, marginX, y);
+      y += bankLines.length * 5;
+    }
+    y += 4;
+  }
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(150, 150, 150);
+  const footerText = docType === 'Facture Définitive'
+    ? 'Ce document est une facture définitive.'
+    : 'Ce document est une facture proforma et ne constitue pas une facture définitive.';
+  doc.text(footerText, 105, 285, { align: 'center' });
+
+  const filename = `${docType === 'Facture Définitive' ? 'Facture' : 'Proforma'}_${f.invoiceNumber}_${(f.clientName || 'client').replace(/\s+/g, '_')}.pdf`;
+
+  return { doc, filename, grandTotal, subtotal, discountAmt };
+}
+
+function readFormFields() {
+  return {
+    issuerName: val('issuerName') || 'JAF Consulting',
+    issuerContact: val('issuerContact'),
+    issuerAddress: val('issuerAddress'),
+    clientName: val('clientName'),
+    clientPhone: val('clientPhone'),
+    clientEmail: val('clientEmail'),
+    researchTopic: val('researchTopic'),
+    invoiceNumber: val('invoiceNumber') || generateInvoiceNumber(),
+    invoiceDate: val('invoiceDate') || new Date().toISOString().split('T')[0],
+    validity: val('validity'),
+    currency: val('currency'),
+    docType: val('docType'),
+    notes: val('notes'),
+    paymentOption1: val('paymentOption1'),
+    paymentOption2: val('paymentOption2'),
+    paymentOption3: val('paymentOption3'),
+    discountPct: parseFloat(val('discountPct')) || 0,
+    items: readItems()
+  };
+}
+
+function val(id) { return document.getElementById(id).value; }
+
+async function generatePDF() {
+  try {
+    const fields = readFormFields();
+    if (!fields.clientName) {
+      showToast('Ajoute le nom du client avant de générer.');
+    }
+    const { doc, filename, grandTotal } = await buildInvoicePDF(fields);
+    doc.save(filename);
+
+    lastPDFBlob = doc.output('blob');
+    lastPDFFilename = filename;
+    lastInvoiceSummary = {
+      clientName: fields.clientName || 'Client',
+      invoiceNumber: fields.invoiceNumber,
+      total: formatNum(grandTotal) + ' ' + fields.currency,
+      docType: fields.docType
+    };
+    document.getElementById('shareButtons').style.display = 'flex';
+    document.getElementById('shareNote').style.display = 'block';
+
+    saveSettings(fields);
+    saveToHistory(fields, grandTotal);
+    showToast('Facture enregistrée dans l\'historique');
+  } catch (err) {
+    alert('Erreur lors de la génération du PDF: ' + err.message);
+    console.error(err);
+  }
+}
+
+// ---------- Partage ----------
+async function shareViaWhatsApp() {
+  if (!lastPDFBlob) { showToast("Génère d'abord le PDF."); return; }
+  const phone = (document.getElementById('clientPhone').value || '').replace(/[^\d]/g, '');
+  const message = `Bonjour, veuillez trouver ci-joint votre ${lastInvoiceSummary.docType.toLowerCase()} n° ${lastInvoiceSummary.invoiceNumber} d'un montant de ${lastInvoiceSummary.total}. Cordialement, JAF Consulting.`;
+
+  const file = new File([lastPDFBlob], lastPDFFilename, { type: 'application/pdf' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: lastInvoiceSummary.docType, text: message });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+
+  const waUrl = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+  window.open(waUrl, '_blank');
+}
+
+async function shareViaEmail() {
+  if (!lastPDFBlob) { showToast("Génère d'abord le PDF."); return; }
+  const email = document.getElementById('clientEmail').value || '';
+  const subject = `${lastInvoiceSummary.docType} ${lastInvoiceSummary.invoiceNumber} — JAF Consulting`;
+  const body = `Bonjour,\n\nVeuillez trouver ci-joint votre ${lastInvoiceSummary.docType.toLowerCase()} n° ${lastInvoiceSummary.invoiceNumber} d'un montant de ${lastInvoiceSummary.total}.\n\nCordialement,\nJAF Consulting`;
+
+  const file = new File([lastPDFBlob], lastPDFFilename, { type: 'application/pdf' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: subject, text: body });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+
+  const mailUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailUrl;
+}
+
+// ---------- Réglages (émetteur / paiement persistés) ----------
+function saveSettings(fields) {
+  const settings = {
+    issuerName: fields.issuerName,
+    issuerContact: fields.issuerContact,
+    issuerAddress: fields.issuerAddress,
+    paymentOption1: fields.paymentOption1,
+    paymentOption2: fields.paymentOption2,
+    paymentOption3: fields.paymentOption3
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { return null; }
+}
+
+// ---------- Historique ----------
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function saveHistoryArray(arr) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 200)));
+}
+
+function saveToHistory(fields, grandTotal) {
+  const history = loadHistory();
+  const entry = {
+    id: currentEditId || (Date.now() + '-' + Math.floor(Math.random() * 1000)),
+    createdAt: new Date().toISOString(),
+    docType: fields.docType,
+    invoiceNumber: fields.invoiceNumber,
+    invoiceDate: fields.invoiceDate,
+    clientName: fields.clientName || 'Client',
+    currency: fields.currency,
+    total: grandTotal,
+    data: fields
+  };
+  const idx = history.findIndex(h => h.id === entry.id);
+  if (idx >= 0) history[idx] = entry; else history.unshift(entry);
+  history.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  saveHistoryArray(history);
+  currentEditId = entry.id;
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  const query = (document.getElementById('historySearch').value || '').toLowerCase().trim();
+  let history = loadHistory();
+  if (query) {
+    history = history.filter(h =>
+      (h.clientName || '').toLowerCase().includes(query) ||
+      (h.invoiceNumber || '').toLowerCase().includes(query)
+    );
+  }
+
+  if (!history.length) {
+    list.innerHTML = `
+      <div class="hist-empty">
+        <span class="ic">🗂️</span>
+        Aucune facture pour le moment.<br>Crée ta première facture dans l'onglet « Facture ».
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = history.map(h => {
+    const badgeClass = h.docType === 'Facture Définitive' ? 'definitive' : 'proforma';
+    const badgeLabel = h.docType === 'Facture Définitive' ? 'Définitive' : 'Proforma';
+    const dateLabel = h.invoiceDate ? formatDateFr(h.invoiceDate) : '';
+    return `
+      <div class="hist-card">
+        <div class="hist-top">
+          <div>
+            <div class="hist-client">${escapeHtml(h.clientName)}</div>
+            <div class="hist-sub">${escapeHtml(h.invoiceNumber)} · ${dateLabel}</div>
+          </div>
+          <span class="hist-badge ${badgeClass}">${badgeLabel}</span>
+        </div>
+        <div class="hist-total">${formatNum(h.total)} ${h.currency}</div>
+        <div class="hist-actions">
+          <button onclick="openHistoryEntry('${h.id}')">✏️ Ouvrir</button>
+          <button onclick="duplicateHistoryEntry('${h.id}')">📄 Dupliquer</button>
+          <button onclick="downloadHistoryEntry('${h.id}')">⬇️ PDF</button>
+          <button class="danger" onclick="deleteHistoryEntry('${h.id}')">🗑️ Supprimer</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function formatDateFr(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function findHistoryEntry(id) {
+  return loadHistory().find(h => h.id === id);
+}
+
+function populateFormFromData(data) {
+  document.getElementById('docType').value = data.docType || 'Facture Proforma';
+  document.getElementById('issuerName').value = data.issuerName || 'JAF Consulting';
+  document.getElementById('issuerContact').value = data.issuerContact || '';
+  document.getElementById('issuerAddress').value = data.issuerAddress || '';
+  document.getElementById('clientName').value = data.clientName || '';
+  document.getElementById('clientPhone').value = data.clientPhone || '';
+  document.getElementById('clientEmail').value = data.clientEmail || '';
+  document.getElementById('researchTopic').value = data.researchTopic || '';
+  document.getElementById('invoiceNumber').value = data.invoiceNumber || '';
+  document.getElementById('invoiceDate').value = data.invoiceDate || '';
+  document.getElementById('validity').value = data.validity || '';
+  document.getElementById('currency').value = data.currency || 'USD';
+  document.getElementById('notes').value = data.notes || '';
+  document.getElementById('paymentOption1').value = data.paymentOption1 || '';
+  document.getElementById('paymentOption2').value = data.paymentOption2 || '';
+  document.getElementById('paymentOption3').value = data.paymentOption3 || '';
+  document.getElementById('discountPct').value = data.discountPct || 0;
+
+  clearRows();
+  (data.items && data.items.length ? data.items : [{ desc: '', qty: 1, pu: 0 }]).forEach(it => addRow(it.desc, it.qty, it.pu));
+  recalc();
+  onDocTypeChange();
+
+  document.getElementById('shareButtons').style.display = 'none';
+  document.getElementById('shareNote').style.display = 'none';
+  lastPDFBlob = null;
+}
+
+function openHistoryEntry(id) {
+  const entry = findHistoryEntry(id);
+  if (!entry) return;
+  currentEditId = entry.id;
+  populateFormFromData(entry.data);
+  document.getElementById('appbarSub').textContent = 'Modification';
+  switchTab('form');
+  showToast('Facture chargée — modifie puis génère le PDF.');
+}
+
+function duplicateHistoryEntry(id) {
+  const entry = findHistoryEntry(id);
+  if (!entry) return;
+  currentEditId = null;
+  const data = Object.assign({}, entry.data);
+  data.invoiceNumber = generateInvoiceNumber();
+  data.invoiceDate = new Date().toISOString().split('T')[0];
+  populateFormFromData(data);
+  document.getElementById('appbarSub').textContent = 'Copie de facture';
+  switchTab('form');
+  showToast('Copie créée avec un nouveau numéro.');
+}
+
+async function downloadHistoryEntry(id) {
+  const entry = findHistoryEntry(id);
+  if (!entry) return;
+  try {
+    const { doc, filename, grandTotal } = await buildInvoicePDF(entry.data);
+    doc.save(filename);
+    lastPDFBlob = doc.output('blob');
+    lastPDFFilename = filename;
+    lastInvoiceSummary = {
+      clientName: entry.data.clientName || 'Client',
+      invoiceNumber: entry.data.invoiceNumber,
+      total: formatNum(grandTotal) + ' ' + entry.data.currency,
+      docType: entry.data.docType
+    };
+    showToast('PDF téléchargé — utilise le formulaire pour le partager.');
+  } catch (err) {
+    alert('Erreur lors de la génération du PDF: ' + err.message);
+  }
+}
+
+function deleteHistoryEntry(id) {
+  if (!confirm('Supprimer cette facture de l\'historique ?')) return;
+  const history = loadHistory().filter(h => h.id !== id);
+  saveHistoryArray(history);
+  renderHistory();
+  showToast('Facture supprimée.');
+}
+
+// ---------- Nouvelle facture (reset) ----------
+function newInvoice() {
+  currentEditId = null;
+  const settings = loadSettings() || {};
+  document.getElementById('docType').value = 'Facture Proforma';
+  document.getElementById('issuerName').value = settings.issuerName || 'JAF Consulting';
+  document.getElementById('issuerContact').value = settings.issuerContact || '';
+  document.getElementById('issuerAddress').value = settings.issuerAddress || '';
+  document.getElementById('clientName').value = '';
+  document.getElementById('clientPhone').value = '';
+  document.getElementById('clientEmail').value = '';
+  document.getElementById('researchTopic').value = '';
+  document.getElementById('invoiceNumber').value = generateInvoiceNumber();
+  document.getElementById('invoiceDate').valueAsDate = new Date();
+  document.getElementById('validity').value = '';
+  document.getElementById('currency').value = 'USD';
+  document.getElementById('notes').value = 'Paiement: 50% à la commande, solde à la livraison des résultats.';
+  document.getElementById('paymentOption1').value = settings.paymentOption1 || 'M-Pesa: 0814762388';
+  document.getElementById('paymentOption2').value = settings.paymentOption2 || 'En espèces';
+  document.getElementById('paymentOption3').value = settings.paymentOption3 || '';
+  document.getElementById('discountPct').value = 0;
+
+  clearRows();
+  addRow('', 1, 0);
+  recalc();
+  onDocTypeChange();
+
+  document.getElementById('shareButtons').style.display = 'none';
+  document.getElementById('shareNote').style.display = 'none';
+  lastPDFBlob = null;
+  switchTab('form');
+  showToast('Nouvelle facture prête.');
+}
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (confirm('Repartir sur une facture vierge ? Les données non enregistrées seront perdues.')) newInvoice();
+});
+document.getElementById('discountPct').addEventListener('input', recalc);
+
+// ---------- Init ----------
+(function init() {
+  const settings = loadSettings();
+  if (settings) {
+    document.getElementById('issuerName').value = settings.issuerName || 'JAF Consulting';
+    document.getElementById('issuerContact').value = settings.issuerContact || '';
+    document.getElementById('issuerAddress').value = settings.issuerAddress || '';
+    document.getElementById('paymentOption1').value = settings.paymentOption1 || 'M-Pesa: 0814762388';
+    document.getElementById('paymentOption2').value = settings.paymentOption2 || 'En espèces';
+    document.getElementById('paymentOption3').value = settings.paymentOption3 || '';
+  } else {
+    document.getElementById('paymentOption1').value = 'M-Pesa: 0814762388';
+    document.getElementById('paymentOption2').value = 'En espèces';
+  }
+  document.getElementById('invoiceDate').valueAsDate = new Date();
+  document.getElementById('invoiceNumber').value = generateInvoiceNumber();
+  addRow('', 1, 0);
+  onDocTypeChange();
+  loadLogo();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
